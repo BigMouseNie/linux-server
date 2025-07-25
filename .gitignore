@@ -1,0 +1,35 @@
+# 编译输出
+/build/
+/bin/
+/out/
+/*.exe
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+
+# 编辑器 / IDE 生成文件
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.DS_Store
+
+# CMake 生成文件
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# 日志与调试
+*.log
+*.core
+*.dump
+
+# 用户配置
+*.user
+*.workspace
+*.sdf
