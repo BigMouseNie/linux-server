@@ -4,14 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-enum SocketAttr {
-  kIsCreate = 0x01,
-  kIsLocal = 0x02,
-  kIsListen = 0x04,
-  kIsIPV6 = 0x08,
-  kIsUDP = 0x10,
-  kIsNonBlock = 0x20,
-};
+#include "socket_buffer.h"
+#include "socket_creator.h"
 
 class SocketWrapper {
  public:
@@ -25,30 +19,29 @@ class SocketWrapper {
 
  public:
   explicit SocketWrapper(bool manual_mgnt = true);
+  ~SocketWrapper() {
+    if (!manual_mgnt_) Close();
+  }
+
   SocketWrapper(const SocketWrapper&) = delete;
   SocketWrapper& operator=(const SocketWrapper&) = delete;
+
   SocketWrapper(SocketWrapper&& other);
   SocketWrapper& operator=(SocketWrapper&& other);
-  ~SocketWrapper();
 
-  int Create(const SocketCfg& sock_cfg);
-  inline int GetSocket() { return sockfd_; }
-  int Recv();
-  int Send();
+  int Create(const SockCfg& sock_cfg);
   void Close();
+  int GetSocket() { return sockfd_; }
+  void SetManualMgnt(bool manual) { manual_mgnt_ = manual; }
+  bool isValid() { return attr_ & kIsCreate; }
+
+  int Recv(SocketBuffer& buf);
+  int Send(SocketBuffer& buf);
 
  private:
-  int CreateSocket(const SocketCfg& sock_cfg);
-  int CreateAddress(const SocketCfg& sock_cfg);
-  int Bind(const SocketCfg& sock_cfg);
-  // int Listen(const SocketCfg& sock_cfg);
-  int SetNonBlock();
-
- private:
-  int sock_attr_;
+  int attr_;
   int sockfd_;
   bool manual_mgnt_;
-  struct sockaddr addr_;
 };
 
 #endif  // NETWORK_SOCKETWRAPPER_H_

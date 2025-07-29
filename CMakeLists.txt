@@ -14,8 +14,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(base)
 
+add_subdirectory(container)
+add_subdirectory(run)
 add_subdirectory(network)
+add_subdirectory(logger)
 
 add_executable(playback-node main.cpp)
 
-target_link_libraries(playback-node PRIVATE base network)
+target_link_libraries(playback-node PRIVATE
+    base container run network logger
+)

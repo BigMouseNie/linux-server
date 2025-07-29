@@ -4,30 +4,35 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <cassert>
-
 class RingBuffer {
  public:
   RingBuffer();
-  ~RingBuffer();
+  virtual ~RingBuffer();
 
   int Read(char* dest, size_t dest_size);
   int Write(const char* src, size_t src_size);
-  int Read(RingBuffer& dest);
-  int Write(RingBuffer& src);
+  int Read(RingBuffer* dest);
+  int Write(RingBuffer* src);
   void Clear();
+  int Resize(size_t size);
 
-  inline size_t Readable() { return readable_; }
-  inline size_t Writable() { return size_ - readable_; }
-  inline size_t Size() { return size_; }
+  size_t Readable() { return readable_; }
+  size_t Writable() { return writeable_; }
+  size_t UnusedSize() { return size_ - readable_; }
+  size_t Size() { return size_; }
+  void Expand(size_t size) { return Expand(size, false); }
+  void EnsureWritableSize(size_t size);
 
- private:
+  const char* GetReadPtr() const { return read_ptr_; }
+  char* GetWritePtr() { return read_ptr_; }
+
   void ReadOut(size_t len);
   void Written(size_t len);
 
-  void EnsureWritableSize(size_t size);
+ private:
   void Compact();
-  void Expand(size_t size);
+  void Expand(size_t size, bool fixed);
+  void Shrink(size_t size);
 
  private:
   class CompactRate {
@@ -38,7 +43,6 @@ class RingBuffer {
     CompactRate& operator=(const CompactRate&) = delete;
 
     bool UpdateStatsAndCheck(bool is_compact) {
-      assert(compact_cnt > 0 && total_cnt > 0);
       ++total_cnt;
       if (total_cnt > kScale) {
         Reset();

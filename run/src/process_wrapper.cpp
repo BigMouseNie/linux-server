@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-int ProcessWrapper::Create() {
+int ProcessWrapper::Run(void* arg) {
   if (-1 == socketpair(AF_LOCAL, SOCK_STREAM, 0, pipe_)) {
     // printf("<%s> : <%d> : err(%s)\n", __FUNCTION__, __LINE__,
     //         strerror(errno));
