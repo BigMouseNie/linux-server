@@ -22,10 +22,9 @@ class RingBuffer {
   size_t Size() { return size_; }
   void Expand(size_t size) { return Expand(size, false); }
   void EnsureWritableSize(size_t size);
-
   const char* GetReadPtr() const { return read_ptr_; }
-  char* GetWritePtr() { return read_ptr_; }
 
+  char* GetWritePtr() { return write_ptr_; }
   void ReadOut(size_t len);
   void Written(size_t len);
 

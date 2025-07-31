@@ -228,3 +228,331 @@ open("/dev/null", O_RDWR);    // stderr (fd 2)
 	- 读它总是返回 EOF；
 	- 写它会直接被丢弃。
 
+
+
+## Container模块
+
+```mermaid
+classDiagram
+
+class CompactRate {
+    +CompactRate() : compact_cnt(1), total_cnt(kScale)
+    +~CompactRate() = default
+    +CompactRate(const CompactRate&) = delete
+    +CompactRate& operator=(const CompactRate&) = delete
+    +bool UpdateStatsAndCheck(bool is_compact)
+    +void Reset()
+    -int compact_cnt
+    -int total_cnt
+    -static const int kScale
+    -static const int kMinAllowedRate
+}
+
+class RingBuffer {
+    +RingBuffer()
+    +virtual ~RingBuffer()
+    +int Read(char* dest, size_t dest_size)
+    +int Write(const char* src, size_t src_size)
+    +int Read(RingBuffer* dest)
+    +int Write(RingBuffer* src)
+    +void Clear()
+    +int Resize(size_t size)
+    +size_t Readable()
+    +size_t Writable()
+    +size_t UnusedSize()
+    +size_t Size()
+    +void Expand(size_t size)
+    +void EnsureWritableSize(size_t size)
+    +const char* GetReadPtr() const
+    +char* GetWritePtr()
+    +void ReadOut(size_t len)
+    +void Written(size_t len)
+    -void Compact()
+    -void Expand(size_t size, bool fixed)
+    -void Shrink(size_t size)
+    -CompactRate compact_rate_
+    -char* data_
+    -char* read_ptr_
+    -char* write_ptr_
+    -size_t readable_
+    -size_t writeable_
+    -size_t size_
+    -static const size_t kExpandFactor
+}
+
+RingBuffer *-- CompactRate : 内嵌
+
+```
+
+这个模块的类都是比较独立的，其中RingBuffer类的使用见名思意，其中内嵌类CompactRate是用来防止RingBuffer频繁的Compact(紧凑)操作的，超过某个频率后会执行Expand
+
+
+
+## Run模块
+
+```mermaid
+classDiagram
+
+class RunBase {
+    +RunBase() : state_(RunState::kInvalid)
+    +virtual ~RunBase() = default;
+    +int Init(Func&& func, Args&&... args)
+    +virtual int Run(void* arg = nullptr)
+    +virtual int Stop(void* arg = nullptr)
+    +virtual int PauseOrUnpaused(void* arg = nullptr)
+    #RunBase(const RunBase&) = delete
+    #RunBase& operator=(const RunBase&) = delete
+    #std::function entry_
+    #RunState state_
+}
+
+class ThreadWrapper {
+    +ThreadWrapper()
+    +~ThreadWrapper()
+    +SetThreadAttr(int flag)
+    +virtual int Run(void* arg = nullptr)
+    +virtual int Stop(void* arg = nullptr)
+    -void ClearAttr()
+    -static void* Entry(void* arg)
+    -static void Sigaction(int signo, siginfo_t* info, void* context)
+    -pthread_t pthread_
+    -pthread_attr_t attr_
+}
+
+class ProcessWrapper{
+    +ProcessWrapper() = default
+    +~ProcessWrapper() = default
+    +virtual int Run(void* arg = nullptr)
+    +int ReadFdFromPipe(int& fd)
+    +int WriteFdToPipe(int fd)
+    +static int Daemonize()
+    -pid_t pid_
+    -int pipe_[2]
+}
+
+ThreadWrapper --|> RunBase
+ProcessWrapper --|> RunBase
+
+```
+
+
+
+基类RunBase实现了多参数的bind,可以调用Init进行绑定，继承RunBase的类都有一个状态RunState,表示当前的状态的切换总体为下面所示，当然这是理想情况，比如RunBase实例化的Run就是当前线程一个函数的执行，就无法Pause,Stop了，当前只有ThreadWrapper实现了Stop根据Sigaction回调，Pause可以根据Sigaction回调来实现
+
+```mermaid
+stateDiagram-v2
+    [*] --> Invalid
+    Invalid --> Initialized : Init()
+    Initialized --> Running : Run()
+    Running --> Paused: PauseOrUnpaused()
+    Paused --> Running : PauseOrUnpaused()
+    Paused --> Stopped : stop()
+    Running --> Stopped : stop()
+    Stopped --> [*]
+```
+
+
+
+
+
+
+
+
+
+## Network模块
+
+```mermaid
+classDiagram
+
+class RingBuffer {
+	+RingBuffer();
+	-~RingBuffer();
+}
+
+class SocketBuffer {
+    +SocketBuffer() = default
+    +SocketBuffer(size_t size)
+    +~SocketBuffer() = default
+    +int ReadFromSock(int sock, bool is_et, int* saved_errno)
+    +int WriteToSock(int sock, bool is_et, int* saved_errno)
+    -static const size_t kMinBufSize
+}
+
+class SocketCfg {
+    +SocketCfg()
+    +~SocketCfg()
+    +SocketCfg(const SocketCfg& other)
+    +SocketCfg& operator=(const SocketCfg& other)
+    +SocketCfg(SocketCfg&& other)
+    +SocketCfg& operator=(SocketCfg&& other)
+    +void SetPort(uint16_t port)
+    +void SetSockAttr(int sock_attr)
+    +void SetBacklog(int backlog)
+    +int SetAddrOrPath(const char* addr_or_path)
+    +int GetSockAttr() const
+    +const char* GetAddress() const
+    -uint16_t port_
+    -int sock_attr_
+    -int backlog_
+    -size_t address_size_
+    -char* address_
+}
+
+class SocketCreator {
+    +static SocketCreator& Instance()
+    +int Create(const SocketCfg& sock_cfg, int* attr = nullptr)
+    -SocketCreator() = default
+    -~SocketCreator() = default
+    -void Close(int fd)
+    -int CreateSocket(const SocketCfg& sock_cfg)
+    -int CreateAddress(int fd, struct sockaddr_storage*, const SocketCfg&)
+    -int Bind(int fd, struct sockaddr_storage* addr, const SocketCfg& sock_cfg)
+    -int Listen(int fd, const SocketCfg& sock_cfg)
+    -int Connect(int fd, struct sockaddr_storage* addr, const SocketCfg& sock_cfg)
+    -int SetNonBlock(int fd)
+}
+
+class SocketWrapper {
+    +SocketWrapper(bool manual_mgnt = true)
+    +~SocketWrapper()
+    +SocketWrapper(SocketWrapper&& other)
+    +SocketWrapper& operator=(SocketWrapper&& other)
+    +int Create(const SocketCfg& sock_cfg)
+    +void Close()
+    +int GetSocket()
+    +void SetManualMgnt(bool manual)
+    +bool IsValid()
+    +int Recv(SocketBuffer& buf)
+    +int Send(SocketBuffer& buf)
+    -int attr_
+    -int sockfd_
+    -bool manual_mgnt_
+}
+
+
+class AcceptCallBack {
+    <<type alias>>
+    +void operator()(int conn_fd, struct sockaddr* addr, int addr_len)
+}
+
+class Acceptor {
+    +Acceptor()
+    +~Acceptor() = default
+    +virtual int Create(AcceptCallBack cb, bool is_et)
+    +int DealConnFromSock(int sock)
+    #AcceptCallBack accept_cb_;
+    #bool is_et_;
+}
+
+class ReactorAcc {
+    +ReactorAcc() = default
+    +~ReactorAcc() = default
+    +virtual int Create(AcceptCallBack cb, int listenfd_num, bool is_et)
+    +int SetListenSock(SocketWrapper&& sock)
+    +int Accept(int timeout_ms)
+    -void Remove(int listnefd)
+    -Epoller epoller_
+    -std::unordered_map<int, SocketWrapper> listenfd_map_
+}
+
+class EventsCallBack {
+    <<type alias>>
+    +void operator()(epoll_event* evs, size_t size)
+}
+
+class Epoller {
+  +Epoller()
+  +~Epoller()
+  +int Create(EventsCallBack cb, size_t event_arr_size, bool is_et)
+  +int Add(int fd, uint32_t events)
+  +int Modify(int fd, uint32_t events)
+  +int Del(int fd)
+  +int Wait(int timeout_ms)
+
+  -int SetNonBlock(int fd)
+  -int epollfd_
+  -bool is_et_
+  -size_t event_arr_size_
+  -struct epoll_event* event_arr_
+  -EventsCallBack ev_cb_
+}
+
+Epoller *-- EventsCallBack
+Acceptor *-- AcceptCallBack
+SocketBuffer --|> RingBuffer
+ReactorAcc --|> Acceptor
+SocketCreator ..> SocketCfg : friend
+SocketWrapper ..> SocketCreator
+ReactorAcc *-- Epoller
+SocketWrapper ..> SocketBuffer : use
+
+```
+
+Eplloer的创建需要给予一个回调函数，在Wait完毕后进行处理。Acceptor的创建也需要一个回调函数，ReactorAcc继承自Acceptor,它需要Epoller的参与才可以创建，它适合Reactor模式的监听，SocketBuffer继承自RingBuffer,增加了对Socket读写操作，SocketCreator是一个单例，提供一个Create函数，配合SocketCfg可以创建多种Socket(支持本地、ipv4、ipv6、tcp、udp、listen、connect),SocketCfg是SocketCreator友元类，SocketWrapper是对套接字本身的封装
+
+
+
+## 日志服务器
+
+### 创建运行时序图
+
+```mermaid
+sequenceDiagram
+
+main->>+LogProc: Run()
+LogProc->>+SubLogProc: fork()
+LogProc->>-main: ret
+SubLogProc->>+LogServ: Instance().Create()
+alt Cfged!=true
+	LogServ->>LogServ: Config()
+end
+LogServ->>Acceptor: Create(ACallBack)
+LogServ->>Epoller: Create(ECallBack)
+LogServ->>Worker: Run()
+LogServ->>-SubLogProc: ret
+SubLogProc->>SubLogProc: wait
+loop running_ = true
+    Worker->>+Epoller: Wait()
+    Epoller->>Epoller: epoll_wait
+    alt fd==servsock
+    	Epoller->>+Acceptor: DealConnFromSock()
+    	Acceptor->>Acceptor: ACallBack
+    	Acceptor->>-Epoller: ret
+    else fd!=servsock
+    	Epoller->>Epoller: ECallBack
+    end
+    Epoller->>-Worker: ret
+end
+
+```
+
+
+
+### 日志发送时序图
+
+```mermaid
+sequenceDiagram
+
+other->>+Logger: Instance().Log()
+alt Cfged!=true
+Logger->>Logger: Config()
+end
+alt clnt_sock.IsValid()
+	Logger->>+ClntSock: Create()
+	ClntSock->>+SocketCreator: Create()
+	SocketCreator->>+LogServ: connect()
+	LogServ->>-SocketCreator: ret
+	SocketCreator->>-ClntSock: ret
+	ClntSock->>-Logger: ret
+end
+Logger->>Logger: FromtLogStr
+Logger->>+ClntSock: Send()
+ClntSock->>LogServ: send()
+ClntSock->>-Logger: ret
+LogServ->>File: fwrite()
+Logger->>-other: ret
+
+```
+
+
+

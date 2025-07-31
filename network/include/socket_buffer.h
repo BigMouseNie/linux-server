@@ -11,7 +11,6 @@ class SocketBuffer : public RingBuffer {
 
   int ReadFromSock(int sock, bool is_et, int* saved_errno);
   int WriteToSock(int sock, bool is_et, int* saved_errno);
-  int AcceptConnFromSock(int sock, bool is_et, int* saved_errno);
 
  private:
   static const size_t kMinBufSize;

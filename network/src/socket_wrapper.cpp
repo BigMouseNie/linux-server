@@ -27,10 +27,16 @@ SocketWrapper& SocketWrapper::operator=(SocketWrapper&& other) {
 
   other.attr_ = 0;
   other.sockfd_ = -1;
+  return *this;
 }
 
-int SocketWrapper::Create(const SockCfg& sock_cfg) {
-  return SocketCreator::Create(sock_cfg, &attr_);
+int SocketWrapper::Create(const SocketCfg& sock_cfg) {
+  int ret = SocketCreator::Instance().Create(sock_cfg, &attr_);
+  if (ret >= 0) {
+    sockfd_ = ret;
+    return 0;
+  }
+  return ret;
 }
 
 void SocketWrapper::Close() {

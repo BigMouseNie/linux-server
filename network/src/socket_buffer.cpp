@@ -56,30 +56,3 @@ int SocketBuffer::WriteToSock(int sock, bool is_et, int* saved_errno) {
   } while (err_interr || is_et);
   return res;
 }
-
-int SocketBuffer::AcceptConnFromSock(int sock, bool is_et, int* saved_errno) {
-  int res = 0;
-  bool err_interr = false;  // 是否信号中断
-  do {
-    err_interr = false;
-    EnsureWritableSize(kMinBufSize);
-    int n = read(sock, GetWritePtr(), Writable());
-    if (n > 0) {
-      res += n;
-      Written(n);
-    } else if (n == 0) {
-      return 0;
-    } else {
-      if (errno == EINTR)
-        err_interr = true;
-      else if (errno == EAGAIN || errno == EWOULDBLOCK)
-        break;
-      else {
-        *saved_errno = errno;
-        res = -1;
-        break;
-      }
-    }
-  } while (err_interr || is_et);
-  return res;
-}

@@ -7,8 +7,6 @@ class ProcessWrapper : public RunBase {
  public:
   ProcessWrapper() = default;
   ~ProcessWrapper() = default;
-  ProcessWrapper(const ProcessWrapper&) = delete;
-  ProcessWrapper& operator=(const ProcessWrapper&) = delete;
 
   virtual int Run(void* arg = nullptr);
 

@@ -9,31 +9,19 @@
 
 class SocketWrapper {
  public:
-  struct SocketCfg {
-    uint16_t port;
-    int sock_attr;
-    int backlog;  // listen
-    size_t address_size;
-    char* address;  // ip or path
-  };
-
- public:
   explicit SocketWrapper(bool manual_mgnt = true);
   ~SocketWrapper() {
     if (!manual_mgnt_) Close();
   }
 
-  SocketWrapper(const SocketWrapper&) = delete;
-  SocketWrapper& operator=(const SocketWrapper&) = delete;
-
   SocketWrapper(SocketWrapper&& other);
   SocketWrapper& operator=(SocketWrapper&& other);
 
-  int Create(const SockCfg& sock_cfg);
+  int Create(const SocketCfg& sock_cfg);
   void Close();
   int GetSocket() { return sockfd_; }
   void SetManualMgnt(bool manual) { manual_mgnt_ = manual; }
-  bool isValid() { return attr_ & kIsCreate; }
+  bool IsValid() { return attr_ & kIsCreate; }
 
   int Recv(SocketBuffer& buf);
   int Send(SocketBuffer& buf);

@@ -1,6 +1,7 @@
 #include "thread_wrapper.h"
 
 #include <errno.h>
+#include <string.h>
 
 ThreadWrapper::ThreadWrapper() : pthread_(0) { attr_ = {0}; }
 ThreadWrapper::~ThreadWrapper() { ClearAttr(); }
@@ -13,9 +14,9 @@ int ThreadWrapper::SetThreadAttr(int flag) {
   ret = pthread_attr_setdetachstate(&attr_, PTHREAD_CREATE_JOINABLE);
   if (ret != 0) return -2;
 
-  // default process competition
-  ret = pthread_attr_setscope(&attr_, PTHREAD_SCOPE_PROCESS);
-  if (ret != 0) return -3;
+  // default process competition // PTHREAD_SCOPE_PROCESS 在大多数 Linux 系统上
+  // 不可用 ret = pthread_attr_setscope(&attr_, PTHREAD_SCOPE_PROCESS); if (ret
+  // != 0) return -3;
   return 0;
 }
 
@@ -25,10 +26,10 @@ int ThreadWrapper::Run(void* arg) {
   }
   // set attr
   int ret = SetThreadAttr(0);
-  if (ret != 0) return -1;
+  if (ret != 0) return -2;
 
   ret = pthread_create(&pthread_, &attr_, &Entry, this);
-  if (ret != 0) return -2;
+  if (ret != 0) return -3;
 
   state_ = RunState::kRunning;
   return 0;
