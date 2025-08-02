@@ -4,6 +4,7 @@
 #include "process_wrapper.h"
 #include "socket_creator.h"
 #include "thread_wrapper.h"
+#include "thread_pool.h"
 
 int CreateLoggerServer(ProcessWrapper* proc) {
   std::cout << "start create logger server" << std::endl;
@@ -33,32 +34,23 @@ int main() {
   proc1.Init(CreateLoggerServer, &proc1);
   int pid = proc1.Run();
   std::cout << "sub proc pid : " << pid << std::endl;
-
+  std::cout << "main proc pid : " << getpid() << std::endl;
   sleep(1); // wait LoggerServer start
 
-  ProcessWrapper proc2;
-  proc2.Init(LogTest, 1);
-  proc2.Run();
+  ThreadPool* thrd_pool = new ThreadPool;
+  thrd_pool->Start(4);
 
-  ProcessWrapper proc3;
-  proc3.Init(LogTest, 2);
-  proc3.Run();
-
-  ThreadWrapper thrd1;
-  thrd1.Init(LogTest, 3);
-  thrd1.Run();
-
-  ThreadWrapper thrd2;
-  thrd2.Init(LogTest, 4);
-  thrd2.Run();
-
-  ThreadWrapper thrd3;
-  thrd3.Init(LogTest, 5);
-  thrd3.Run();
-
-  LogTest(6);
-
+  thrd_pool->AddTask(LogTest, 1);
+  thrd_pool->AddTask(LogTest, 2);
+  thrd_pool->AddTask(LogTest, 3);
+  thrd_pool->AddTask(LogTest, 4);
+  thrd_pool->AddTask(LogTest, 5);
+  thrd_pool->AddTask(LogTest, 6);
+  LogTest(7);
+  
   sleep(1);
-  std::cout << "main end" << std::endl;
+  proc1.WriteFdToPipe(-1);
+  sleep(1);
+  std::cout << "main end: pid : " << getpid() << std::endl;
   return 0;
 }

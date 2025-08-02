@@ -4,7 +4,15 @@
 #include <string.h>
 
 ThreadWrapper::ThreadWrapper() : pthread_(0) { attr_ = {0}; }
-ThreadWrapper::~ThreadWrapper() { ClearAttr(); }
+ThreadWrapper::~ThreadWrapper() {
+  if (state_ == RunState::kRunning || state_ == RunState::kPaused) {
+    Stop();
+  }
+  if (pthread_ != 0) {
+    pthread_join(pthread_, nullptr);
+  }
+  ClearAttr();
+}
 
 int ThreadWrapper::SetThreadAttr(int flag) {
   ClearAttr();
@@ -13,10 +21,6 @@ int ThreadWrapper::SetThreadAttr(int flag) {
 
   ret = pthread_attr_setdetachstate(&attr_, PTHREAD_CREATE_JOINABLE);
   if (ret != 0) return -2;
-
-  // default process competition // PTHREAD_SCOPE_PROCESS 在大多数 Linux 系统上
-  // 不可用 ret = pthread_attr_setscope(&attr_, PTHREAD_SCOPE_PROCESS); if (ret
-  // != 0) return -3;
   return 0;
 }
 
@@ -36,20 +40,20 @@ int ThreadWrapper::Run(void* arg) {
 }
 
 int ThreadWrapper::Stop(void* arg) {
-  if (state_ != RunState::kRunning) {
+  if (state_ == RunState::kStopped) return 0;
+  if (state_ != RunState::kRunning && state_ != RunState::kPaused) {
     return -1;
   }
-  pthread_t pthread = pthread_;
-  pthread_ = 0;
   timespec ts;
   ts.tv_sec = 0;
   ts.tv_nsec = 100 * 1000 * 1000;  // 100ms
-  int ret = pthread_timedjoin_np(pthread, nullptr, &ts);
+  int ret = pthread_timedjoin_np(pthread_, nullptr, &ts);
   if (ret == ETIMEDOUT) {
-    pthread_detach(pthread);
-    pthread_kill(pthread, SIGUSR2);
+    pthread_kill(pthread_, SIGUSR2);
+    pthread_join(pthread_, nullptr);
   }
   state_ = RunState::kStopped;
+  pthread_ = 0;
   return 0;
 }
 
@@ -61,9 +65,7 @@ void* ThreadWrapper::Entry(void* arg) {
   act.sa_sigaction = &ThreadWrapper::Sigaction;
   // sigaction(SIGUSR1, &act, nullptr); // pause
   sigaction(SIGUSR2, &act, nullptr);  // stop
-
   thiz->entry_();
-  pthread_detach(pthread_self());
   thiz->state_ = RunState::kStopped;
   pthread_exit(nullptr);
 }

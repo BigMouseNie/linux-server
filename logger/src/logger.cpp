@@ -19,6 +19,9 @@ Logger::~Logger() {
     fclose(p_log_file_);
     p_log_file_ = nullptr;
   }
+  for (auto clnt_fd : clientfd_set_) {
+    close(clnt_fd);
+  }
 }
 
 Logger& Logger::Instance() {

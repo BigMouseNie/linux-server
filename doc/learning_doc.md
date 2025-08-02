@@ -232,6 +232,10 @@ open("/dev/null", O_RDWR);    // stderr (fd 2)
 
 ## Container模块
 
+这个模块的类都是比较独立的，其中RingBuffer类的使用见名思意，其中内嵌类CompactRate是用来防止RingBuffer频繁的Compact(紧凑)操作的，超过某个频率后会执行Expand
+
+### RingBuffer
+
 ```mermaid
 classDiagram
 
@@ -284,7 +288,63 @@ RingBuffer *-- CompactRate : 内嵌
 
 ```
 
-这个模块的类都是比较独立的，其中RingBuffer类的使用见名思意，其中内嵌类CompactRate是用来防止RingBuffer频繁的Compact(紧凑)操作的，超过某个频率后会执行Expand
+
+
+### BlockingQueue
+
+该类是一个双端的线程安全的阻塞队列，适用于多生产者多消费者的情景，目前用于线程池，提供了一些方法Pop和Push，下面是锁序，保证不会死锁，更详细需要结合代码，有些判断也是必不可少
+
+
+
+
+
+```mermaid
+graph LR
+    Path1 --> PushLock --> Push --> PushUnlock --> NotifyOne
+
+    Path2 --> PopLock --> IsEmpty --N--> Pop --> PopUnlock --> PopEnd
+    Path3--> PopLock
+    NotifyOne -.wake.-> Wait
+    NotifyOne ----> PushEnd
+    IsEmpty --Y--> PushLock --unique move--> P3_PushUnlock["PushUnlock"] --enter--> Wait --> P3_PushLock["PushLock"] --> Swap --> Pop
+
+```
+
+
+
+
+
+## Pool模块
+
+### ThreadPool
+
+```mermaid
+classDiagram
+
+class BlockingQueue {
+	+Push()
+	+Pop()
+	+Realse()
+}
+
+class ThreadPool {
+    +ThreadPool() = default
+    +~ThreadPool()
+
+    +ThreadPool(const ThreadPool&) = delete
+    +ThreadPool& operator=(const ThreadPool&) = delete
+    +int Start(int thrd_num)
+    +void AddTask(Func&& func, Args&&... args)
+ 
+    -void Work()
+    -BlockingQueue<function> que_
+    -std::vector<std::thread> workers_
+}
+
+ThreadPool *-- BlockingQueue
+```
+
+
 
 
 

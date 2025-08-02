@@ -8,9 +8,10 @@ add_subdirectory(container)
 add_subdirectory(run)
 add_subdirectory(network)
 add_subdirectory(logger)
+add_subdirectory(pool)
 
 add_executable(playback-node main.cpp)
 
 target_link_libraries(playback-node PRIVATE
-    container run network logger
+    container run network logger pool
 )
