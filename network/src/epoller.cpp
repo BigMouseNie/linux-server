@@ -3,7 +3,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
-#include <sys/epoll.h>
 #include <unistd.h>
 
 Epoller::Epoller() : event_arr_size_(0), is_et_(false) {}

@@ -68,20 +68,23 @@ SocketCreator& SocketCreator::Instance() {
   return kSocketCreator;
 }
 
-int SocketCreator::Create(const SocketCfg& sock_cfg, int* attr) {
+int SocketCreator::Create(const SocketCfg& sock_cfg, int* attr,
+                          struct sockaddr* addr) {
   int ret = CreateSocket(sock_cfg);
   if (ret < 0) return -1;
   int fd = ret;
-
-  struct sockaddr_storage addr;
-  ret = CreateAddress(fd, &addr, sock_cfg);
+  if (!addr) {
+    memset(&t_addr_, 0, sizeof(t_addr_));
+    addr = (struct sockaddr*)&t_addr_;
+  }
+  ret = CreateAddress(fd, addr, sock_cfg);
   if (ret < 0) {
     Close(fd);
     return -2;
   }
 
   if (sock_cfg.sock_attr_ & kIsListen) {
-    ret = Bind(fd, &addr, sock_cfg);
+    ret = Bind(fd, addr, sock_cfg);
     if (ret < 0) {
       Close(fd);
       return -3;
@@ -93,7 +96,7 @@ int SocketCreator::Create(const SocketCfg& sock_cfg, int* attr) {
       return -4;
     }
   } else {
-    ret = Connect(fd, &addr, sock_cfg);
+    ret = Connect(fd, addr, sock_cfg);
     if (ret < 0) {
       Close(fd);
       return -5;
@@ -132,7 +135,7 @@ int SocketCreator::CreateSocket(const SocketCfg& sock_cfg) {
   return fd;
 }
 
-int SocketCreator::CreateAddress(int fd, struct sockaddr_storage* addr,
+int SocketCreator::CreateAddress(int fd, struct sockaddr* addr,
                                  const SocketCfg& sock_cfg) {
   if (!sock_cfg.address_ || sock_cfg.address_size_ == 0) return -1;
   memset(addr, 0, sizeof(*addr));
@@ -172,7 +175,7 @@ int SocketCreator::CreateAddress(int fd, struct sockaddr_storage* addr,
   return 0;
 }
 
-int SocketCreator::Bind(int fd, struct sockaddr_storage* addr,
+int SocketCreator::Bind(int fd, struct sockaddr* addr,
                         const SocketCfg& sock_cfg) {
   socklen_t addr_len = 0;
   if (sock_cfg.sock_attr_ & kIsLocal) {
@@ -197,7 +200,7 @@ int SocketCreator::Listen(int fd, const SocketCfg& sock_cfg) {
   return 0;
 }
 
-int SocketCreator::Connect(int fd, struct sockaddr_storage* addr,
+int SocketCreator::Connect(int fd, struct sockaddr* addr,
                            const SocketCfg& sock_cfg) {
   socklen_t addr_len = 0;
   if (sock_cfg.sock_attr_ & kIsLocal) {

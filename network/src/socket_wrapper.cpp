@@ -30,8 +30,8 @@ SocketWrapper& SocketWrapper::operator=(SocketWrapper&& other) {
   return *this;
 }
 
-int SocketWrapper::Create(const SocketCfg& sock_cfg) {
-  int ret = SocketCreator::Instance().Create(sock_cfg, &attr_);
+int SocketWrapper::Create(const SocketCfg& sock_cfg, struct sockaddr* addr) {
+  int ret = SocketCreator::Instance().Create(sock_cfg, &attr_, addr);
   if (ret >= 0) {
     sockfd_ = ret;
     return 0;

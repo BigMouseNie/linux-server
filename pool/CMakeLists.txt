@@ -7,5 +7,5 @@ target_include_directories(pool PUBLIC
 )
 
 target_link_libraries(pool PRIVATE
-    run container network
+    container
 )

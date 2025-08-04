@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/socket.h>
 
 enum SocketAttr {
   kIsCreate = 0x01,
@@ -41,7 +42,9 @@ class SocketCfg {
   void SetBacklog(int backlog) { backlog_ = backlog; }
   int SetAddrOrPath(const char* addr_or_path);
 
+  int GetPort() const { return port_; }
   int GetSockAttr() const { return sock_attr_; }
+  int GetBacklog() const { return backlog_; }
   const char* GetAddress() const { return address_; }
 
  private:
@@ -55,19 +58,22 @@ class SocketCfg {
 class SocketCreator {
  public:
   static SocketCreator& Instance();
-  int Create(const SocketCfg& sock_cfg, int* attr = nullptr);
+  int Create(const SocketCfg& sock_cfg, int* attr = nullptr,
+             struct sockaddr* addr = nullptr);
 
  private:
   SocketCreator() = default;
   ~SocketCreator() = default;
   void Close(int fd);
   int CreateSocket(const SocketCfg& sock_cfg);
-  int CreateAddress(int fd, struct sockaddr_storage* addr,
-                    const SocketCfg& sock_cfg);
-  int Bind(int fd, struct sockaddr_storage* addr, const SocketCfg& sock_cfg);
+  int CreateAddress(int fd, struct sockaddr* addr, const SocketCfg& sock_cfg);
+  int Bind(int fd, struct sockaddr* addr, const SocketCfg& sock_cfg);
   int Listen(int fd, const SocketCfg& sock_cfg);
-  int Connect(int fd, struct sockaddr_storage* addr, const SocketCfg& sock_cfg);
+  int Connect(int fd, struct sockaddr* addr, const SocketCfg& sock_cfg);
   int SetNonBlock(int fd);
+
+ private:
+  struct sockaddr_storage t_addr_;
 };
 
 #endif  // NETWORK_SOCKETCREATOR_H_

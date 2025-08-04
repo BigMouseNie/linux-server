@@ -1,10 +1,11 @@
 #include <iostream>
 
+#include "http_parser_wrap.h"
 #include "logger.h"
 #include "process_wrapper.h"
 #include "socket_creator.h"
-#include "thread_wrapper.h"
 #include "thread_pool.h"
+#include "thread_wrapper.h"
 
 int CreateLoggerServer(ProcessWrapper* proc) {
   std::cout << "start create logger server" << std::endl;
@@ -29,13 +30,13 @@ void LogTest(int x) {
   LOG_FATAL("This is test(FATA) ====> %d", x);
 }
 
-int main() {
+void ModLogTest() {
   ProcessWrapper proc1;
   proc1.Init(CreateLoggerServer, &proc1);
   int pid = proc1.Run();
   std::cout << "sub proc pid : " << pid << std::endl;
   std::cout << "main proc pid : " << getpid() << std::endl;
-  sleep(1); // wait LoggerServer start
+  sleep(1);  // wait LoggerServer start
 
   ThreadPool* thrd_pool = new ThreadPool;
   thrd_pool->Start(4);
@@ -47,10 +48,28 @@ int main() {
   thrd_pool->AddTask(LogTest, 5);
   thrd_pool->AddTask(LogTest, 6);
   LogTest(7);
-  
+
   sleep(1);
   proc1.WriteFdToPipe(-1);
   sleep(1);
   std::cout << "main end: pid : " << getpid() << std::endl;
+}
+
+int main() {
+  std::string uir_str("https://example.com/search/info?q=me&lang=en#top");
+  std::cout << "start" << std::endl;
+  UrlObject url_obj(uir_str);
+  std::cout << "end" << std::endl;
+  if (url_obj.IsValid()) {
+    std::cout << "Scheme : " << url_obj.Scheme() << std::endl;
+    std::cout << "Host : " << url_obj.Host() << std::endl;
+    std::cout << "Path : " << url_obj.Path() << std::endl;
+    std::cout << "Query : " << url_obj.Query() << std::endl;
+    std::cout << "q : " << url_obj["q"].second << std::endl;
+    std::cout << "lang : " << url_obj["lang"].second << std::endl;
+    std::cout << "null : " << url_obj["null"].second << std::endl;
+  } else {
+    std::cout << url_obj.GetErrorStr() << std::endl;
+  }
   return 0;
 }

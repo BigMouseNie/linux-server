@@ -9,8 +9,6 @@
 
 int ProcessWrapper::Run(void* arg) {
   if (-1 == socketpair(AF_LOCAL, SOCK_STREAM, 0, pipe_)) {
-    // printf("<%s> : <%d> : err(%s)\n", __FUNCTION__, __LINE__,
-    //         strerror(errno));
     return -1;
   }
 
@@ -18,40 +16,34 @@ int ProcessWrapper::Run(void* arg) {
   if (pid_ == -1) {
     return -2;
   }
-  if (pid_ == 0) {  // sub process
-    close(pipe_[1]);
-    pipe_[1] = 0;                 // close
-    shutdown(pipe_[0], SHUT_WR);  // shutdown write
-    // printf("<%s> : <%d> : pid(%d)\n", __FUNCTION__, __LINE__, getpid());
+  if (pid_ == 0) {    // sub process
+    close(pipe_[0]);  // close
+    pipe_[0] = -1;
+    fd_ = pipe_[1];
     entry_();
     exit(0);
   }
 
   // main
-  close(pipe_[0]);
-  pipe_[0] = 0;                 // close
-  shutdown(pipe_[1], SHUT_RD);  // shutdown read
+  close(pipe_[1]);  // close
+  pipe_[1] = -1;
+  fd_ = pipe_[0];
   return pid_;
 }
 
-int ProcessWrapper::ReadFdFromPipe(int& fd) {
+int ProcessWrapper::ReadFdFromPipe(int& fd, void* info, int* info_len) {
   struct msghdr msg = {0};
-  struct iovec iov[2];
-  char temp[2][10];
-  iov[0].iov_len = sizeof(temp[0]);
-  iov[0].iov_base = temp[0];
-  iov[1].iov_len = sizeof(temp[1]);
-  iov[1].iov_base = temp[1];
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 2;
+  if (info && info_len) {
+    msg.msg_iovlen = 1;
+    msg.msg_iov->iov_base = info;
+    msg.msg_iov->iov_len = *info_len;
+  }
 
   char cmsg_buf[CMSG_SPACE(sizeof(int))];
   msg.msg_control = cmsg_buf;
   msg.msg_controllen = sizeof(cmsg_buf);
 
-  if (-1 == recvmsg(pipe_[0], &msg, 0)) {
-    // printf("<%s> : <%d> : err(%s)\n", __FUNCTION__, __LINE__,
-    //         strerror(errno));
+  if (-1 == recvmsg(fd_, &msg, 0)) {
     return -1;
   }
   struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
@@ -59,20 +51,16 @@ int ProcessWrapper::ReadFdFromPipe(int& fd) {
     memcpy(&fd, CMSG_DATA(cmsg), sizeof(fd));
     return 0;
   }
-  // printf("<%s> : <%d> : err(%s)\n", __FUNCTION__, __LINE__, strerror(errno));
   return -1;
 }
 
-int ProcessWrapper::WriteFdToPipe(int fd) {
+int ProcessWrapper::WriteFdToPipe(int fd, void* info, int info_len) {
   struct msghdr msg = {0};
-  struct iovec iov[2];
-  char temp[2][10] = {"wang", "shuo"};
-  iov[0].iov_base = temp[0];
-  iov[0].iov_len = strlen(temp[0]) + 1;
-  iov[1].iov_base = temp[1];
-  iov[1].iov_len = strlen(temp[1]) + 1;
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 2;
+  if (info && info_len > 0) {
+    msg.msg_iovlen = 1;
+    msg.msg_iov->iov_base = info;
+    msg.msg_iov->iov_len = info_len;
+  }
 
   char cmsg_buf[CMSG_SPACE(sizeof(int))];
   msg.msg_control = cmsg_buf;
@@ -86,9 +74,7 @@ int ProcessWrapper::WriteFdToPipe(int fd) {
   void* cdata = CMSG_DATA(cmsg);
   *static_cast<int*>(cdata) = fd;
 
-  if (-1 == sendmsg(pipe_[1], &msg, 0)) {
-    // printf("<%s> : <%d> : err(%s)\n", __FUNCTION__, __LINE__,
-    //         strerror(errno));
+  if (-1 == sendmsg(fd, &msg, 0)) {
     return -1;
   }
   return 0;

@@ -17,7 +17,7 @@ class SocketWrapper {
   SocketWrapper(SocketWrapper&& other);
   SocketWrapper& operator=(SocketWrapper&& other);
 
-  int Create(const SocketCfg& sock_cfg);
+  int Create(const SocketCfg& sock_cfg, struct sockaddr* addr = nullptr);
   void Close();
   int GetSocket() { return sockfd_; }
   void SetManualMgnt(bool manual) { manual_mgnt_ = manual; }
