@@ -1,0 +1,14 @@
+{
+    "__comment_1": "Support : LOCAL INET INET6",
+    "__comment_2": "LOCAL mode requires filling in the file address",
+    "__comment_3": "Supports : STREAM(TCP) DGRAM(UDP)",
+    "__comment_4": "backlog is the second parameter of listen()",
+    "domain": "IPV4",
+    "type": "STREAM",
+    "address": "127.0.0.1",
+    "port": 8081,
+    "backlog": 5,
+    "edge_trigger": true,
+    "thread_num": 2,
+    "epoll_events": 32
+}
