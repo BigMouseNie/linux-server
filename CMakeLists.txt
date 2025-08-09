@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(playback-node LANGUAGES C CXX)
+project(linux-server LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -19,12 +20,14 @@ add_subdirectory(logger)
 add_subdirectory(pool)
 add_subdirectory(business)
 add_subdirectory(http)
+add_subdirectory(database)
+add_subdirectory(encryption)
 
-add_executable(playback-node main.cpp)
+add_executable(linux-server main.cpp)
 
-target_link_libraries(playback-node PRIVATE
+target_link_libraries(linux-server PRIVATE
     container run network
     logger pool business
     nlohmann_json::nlohmann_json
-    http
+    http database encryption
 )

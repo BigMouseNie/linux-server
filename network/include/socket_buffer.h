@@ -3,6 +3,7 @@
 
 #include "ring_buffer.h"
 
+class SocketWrapper;
 class SocketBuffer : public RingBuffer {
  public:
   SocketBuffer() = default;
@@ -11,6 +12,8 @@ class SocketBuffer : public RingBuffer {
 
   int ReadFromSock(int sock, bool is_et, int* saved_errno);
   int WriteToSock(int sock, bool is_et, int* saved_errno);
+  int ReadFromSock(SocketWrapper& sock, int* saved_errno);
+  int WriteToSock(SocketWrapper& sock, int* saved_errno);
 
  private:
   static const size_t kMinBufSize;

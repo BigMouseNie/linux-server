@@ -5,7 +5,7 @@
 #include <memory.h>
 #include <unistd.h>
 
-Epoller::Epoller() : event_arr_size_(0), is_et_(false) {}
+Epoller::Epoller() : event_arr_size_(0), is_et_(true) {}
 
 Epoller::~Epoller() {
   if (event_arr_) {
@@ -28,7 +28,7 @@ int Epoller::Create(EventsCallBack cb, size_t event_arr_size, bool is_et) {
   return epollfd_ < 0 ? -1 : 0;
 }
 
-int Epoller::Add(int fd, uint32_t events) {
+int Epoller::Add(int fd, uint32_t events, void* ev_data) {
   if (fd < 0) return -1;
 
   if (is_et_) {
@@ -37,7 +37,12 @@ int Epoller::Add(int fd, uint32_t events) {
   }
 
   struct epoll_event ev = {0};
-  ev.data.fd = fd;
+  sizeof(ev.data);
+  if (!ev_data)
+    ev.data.fd = fd;
+  else
+    ev.data.ptr = ev_data;
+
   ev.events = events;
   int ret = epoll_ctl(epollfd_, EPOLL_CTL_ADD, fd, &ev);
   if (ret < 0) {

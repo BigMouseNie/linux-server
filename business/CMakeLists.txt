@@ -1,5 +1,5 @@
 add_library(business STATIC
-    src/playback_biz.cpp
+    src/echo_biz.cpp
 )
 
 target_include_directories(business PUBLIC
@@ -7,5 +7,5 @@ target_include_directories(business PUBLIC
 )
 
 target_link_libraries(business PRIVATE
-    logger pool
+    logger pool http network run
 )

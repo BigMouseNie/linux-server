@@ -15,14 +15,37 @@ class HttpParserWrap {
   HttpParserWrap& operator=(const HttpParserWrap& other);
 
   int Parser(const std::string& data);
-  //   uint32_t Method() const;
-  //   void Headers();
-  //   void Status();
-  //   void Url();
-  //   void Body();
-  //   void Errno();
+  int Method(int& method) const {
+    if (method_ == -1) return -1;
+    method = method_;
+    return 0;
+  }
+  int Headers(const std::string& hdr_key, std::string& hdr_val) const;
+  int Status(int status) const {
+    if (status_.empty()) return -1;
+    status = std::stoi(status_);
+    return 0;
+  }
+  int Url(std::string& url) const {
+    if (url_.empty()) return -1;
+    url = url_;
+    return 0;
+  }
+  int Body(std::string& body) {
+    if (body_.empty()) return -1;
+    body = body_;
+    return 0;
+  }
 
- protected:
+  std::string GetError() {
+    const char* name = http_errno_name((enum http_errno)parser_.http_errno);
+    const char* desc =
+        http_errno_description((enum http_errno)parser_.http_errno);
+    if (!name || !desc) return "";
+    return std::string("[") + name + "] " + desc;
+  }
+
+ private:
   static int OnMessageBegin(http_parser* h_parser);
   static int OnUrl(http_parser* h_parser, const char* at, size_t length);
   static int OnStatus(http_parser* h_parser, const char* at, size_t length);
@@ -43,7 +66,18 @@ class HttpParserWrap {
   int OnBody(const char* at, size_t length);
   int OnMessageComplete();
 
+  void Clear() {
+    method_ = -1;
+    url_.clear();
+    status_.clear();
+    body_.clear();
+    complate_ = false;
+    last_hdr_field_.clear();
+    hdr_map_.clear();
+  }
+
  private:
+  int method_;
   std::string url_;
   std::string status_;
   std::string body_;

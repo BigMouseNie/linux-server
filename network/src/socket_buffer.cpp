@@ -3,6 +3,8 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include "socket_wrapper.h"
+
 const size_t SocketBuffer::kMinBufSize = 256;
 
 int SocketBuffer::ReadFromSock(int sock, bool is_et, int* saved_errno) {
@@ -16,7 +18,7 @@ int SocketBuffer::ReadFromSock(int sock, bool is_et, int* saved_errno) {
       res += n;
       Written(n);
     } else if (n == 0) {
-      return 0;
+      break;
     } else {
       if (errno == EINTR)
         err_interr = true;
@@ -55,4 +57,14 @@ int SocketBuffer::WriteToSock(int sock, bool is_et, int* saved_errno) {
     }
   } while (err_interr || is_et);
   return res;
+}
+
+int SocketBuffer::ReadFromSock(SocketWrapper& sock, int* saved_errno) {
+  if (!sock.IsValid()) return -1;
+  return ReadFromSock(sock.GetSocket(), sock.IsNonBlock(), saved_errno);
+}
+
+int SocketBuffer::WriteToSock(SocketWrapper& sock, int* saved_errno) {
+  if (!sock.IsValid()) return -1;
+  return WriteToSock(sock.GetSocket(), sock.IsNonBlock(), saved_errno);
 }

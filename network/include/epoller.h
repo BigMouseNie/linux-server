@@ -17,7 +17,7 @@ class Epoller {
   Epoller& operator=(const Epoller&) = delete;
 
   int Create(EventsCallBack cb, size_t event_arr_size, bool is_et);
-  int Add(int fd, uint32_t events);
+  int Add(int fd, uint32_t events, void* ev_data = nullptr);
   int Modify(int fd, uint32_t events);
   int Del(int fd);
   int Wait(int timeout_ms);

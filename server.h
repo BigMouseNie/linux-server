@@ -1,5 +1,5 @@
-#ifndef PLAYBACKNODE_SERVER_H_
-#define PLAYBACKNODE_SERVER_H_
+#ifndef LINUXSERVER_SERVER_H_
+#define LINUXSERVER_SERVER_H_
 
 #include <memory>
 
@@ -19,16 +19,15 @@ class Server {
   ~Server();
   Server(const Server&) = delete;
   Server& operator=(const Server&) = delete;
-  void Config();
+  int Config();
   void Work();
 
  private:
   SocketCfg sock_cfg_;
-  SocketWrapper serv_sock_;
   ReactorAcc acceptor_;
   bool running_;
   ThreadWrapper worker_;
   std::unique_ptr<Business> biz_;
 };
 
-#endif  // PLAYBACKNODE_SERVER_H_
+#endif  // LINUXSERVER_SERVER_H_

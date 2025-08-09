@@ -4,7 +4,7 @@
 
 #include "memory.h"
 
-HttpParserWrap::HttpParserWrap() : complate_(false) {
+HttpParserWrap::HttpParserWrap() : method_(-1), complate_(false) {
   memset(&parser_, 0, sizeof(parser_));
   parser_.data = this;
   http_parser_init(&parser_, HTTP_REQUEST);
@@ -16,7 +16,7 @@ HttpParserWrap::HttpParserWrap() : complate_(false) {
   settings_.on_header_value = &HttpParserWrap::OnHeaderValue;
   settings_.on_headers_complete = &HttpParserWrap::OnHeadersComplete;
   settings_.on_body = &HttpParserWrap::OnBody;
-  settings_.on_message_complete = &HttpParserWrap::OnMessageBegin;
+  settings_.on_message_complete = &HttpParserWrap::OnMessageComplete;
 }
 
 HttpParserWrap::~HttpParserWrap() {}
@@ -43,10 +43,11 @@ HttpParserWrap& HttpParserWrap::operator=(const HttpParserWrap& other) {
   memcpy(&parser_, &(other.parser_), sizeof(&parser_));
   parser_.data = this;
   memcpy(&settings_, &(other.settings_), sizeof(&settings_));
+  return *this;
 }
 
 int HttpParserWrap::Parser(const std::string& data) {
-  complate_ = false;
+  Clear();
   size_t ret =
       http_parser_execute(&parser_, &settings_, data.data(), data.size());
   if (complate_ == false) {
@@ -54,6 +55,16 @@ int HttpParserWrap::Parser(const std::string& data) {
     return -1;
   }
   return ret;
+}
+
+int HttpParserWrap::Headers(const std::string& hdr_key,
+                            std::string& hdr_val) const {
+  auto it = hdr_map_.find(hdr_key);
+  if (it == hdr_map_.end()) {
+    return -1;
+  }
+  hdr_val = it->second;
+  return 0;
 }
 
 int HttpParserWrap::OnMessageBegin(http_parser* h_parser) {
@@ -95,6 +106,7 @@ int HttpParserWrap::OnMessageComplete(http_parser* h_parser) {
 
 int HttpParserWrap::OnMessageBegin() {
   // pass
+
   return 0;
 }
 
@@ -118,7 +130,10 @@ int HttpParserWrap::OnHeaderValue(const char* at, size_t length) {
   return 0;
 }
 
-int HttpParserWrap::OnHeadersComplete() { return 0; }
+int HttpParserWrap::OnHeadersComplete() {
+  method_ = parser_.method;
+  return 0;
+}
 
 int HttpParserWrap::OnBody(const char* at, size_t length) {
   body_.append(at, length);

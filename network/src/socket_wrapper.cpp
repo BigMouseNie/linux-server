@@ -1,4 +1,5 @@
 #include "socket_wrapper.h"
+#include "socket_buffer.h"
 
 #include <arpa/inet.h>
 #include <fcntl.h>

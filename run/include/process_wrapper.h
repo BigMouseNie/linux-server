@@ -16,9 +16,6 @@ class ProcessWrapper : public RunBase {
   static int Daemonize();
 
  private:
-  void WriteInfoToMsgHdr(struct msghdr* msgh, void* Info, int info_len);
-
- private:
   pid_t pid_;
   int pipe_[2];
   int fd_;
