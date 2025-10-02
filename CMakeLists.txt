@@ -31,3 +31,6 @@ target_link_libraries(linux-server PRIVATE
     nlohmann_json::nlohmann_json
     http database encryption
 )
+
+enable_testing()
+add_subdirectory(tests)

@@ -1,10 +1,11 @@
 #include "ring_buffer.h"
 
-#include "memory.h"
+#include <memory.h>
+#include <stdlib.h>
 
 const size_t RingBuffer::kExpandFactor = 2;
 const int RingBuffer::CompactRate::kScale = 10;
-const int RingBuffer::CompactRate::kMinAllowedRate = 3;
+const int RingBuffer::CompactRate::kMinAllowedRate = 5;
 
 RingBuffer::RingBuffer()
     : data_(nullptr),
@@ -16,17 +17,22 @@ RingBuffer::RingBuffer()
 
 RingBuffer::~RingBuffer() {
   if (data_) {
-    delete[] data_;
+    free(data_);
     data_ = nullptr;
     read_ptr_ = 0;
     write_ptr_ = 0;
   }
 }
 
-int RingBuffer::Read(char* dest, size_t dest_size) {
+int RingBuffer::Peek(char* dest, size_t dest_size) const {
   if (!dest) return 0;
   size_t read_len = readable_ > dest_size ? dest_size : readable_;
   memcpy(dest, read_ptr_, read_len);
+  return read_len;
+}
+
+int RingBuffer::Read(char* dest, size_t dest_size) {
+  size_t read_len = Peek(dest, dest_size);
   ReadOut(read_len);
   return read_len;
 }
@@ -54,97 +60,58 @@ int RingBuffer::Write(RingBuffer* src) {
   return src->Read(this);
 }
 
-void RingBuffer::Clear() {
-  read_ptr_ = data_;
-  write_ptr_ = data_;
-  readable_ = 0;
-  writeable_ = size_;
-}
-
 int RingBuffer::Resize(size_t size) {
   if (size == size_) return 0;
-  if (size > size_)
-    Expand(size, true);
-  else
-    Shrink(size);
+  compact_rate_.Reset();
+
+  if (size == 0) {
+    free(data_);
+    data_ = nullptr;
+    size_ = size;
+    Clear();
+    return 0;
+  }
+
+  if (size_ == 0) {
+    data_ = (char*)malloc(sizeof(char) * size);
+    if (!data_) return -1;
+    size_ = size;
+    Clear();
+    return 0;
+  }
+
+  Compact();
+  void* tmp = realloc(data_, size);
+  if (!tmp) return -2;
+  data_ = (char*)tmp;
+  read_ptr_ = data_;
+  readable_ = readable_ > size ? size : readable_;
+  write_ptr_ = read_ptr_ + readable_;
+  writeable_ = size - readable_;
+  size_ = size;
   return 0;
 }
 
-void RingBuffer::ReadOut(size_t len) {
-  read_ptr_ += len;
-  readable_ -= len;
-}
-
-void RingBuffer::Written(size_t len) {
-  write_ptr_ += len;
-  writeable_ -= len;
-  readable_ += len;
-}
-
-void RingBuffer::EnsureWritableSize(size_t size) {
+int RingBuffer::EnsureWritableSize(size_t size) {
   if (writeable_ >= size) {
-    compact_rate_.UpdateStatsAndCheck(false);
-    return;
+    if (compact_rate_.UpdateStatsAndCheck(false)) {
+      return 0;
+    }
   }
-  if (UnusedSize() >= size) {
+  else if (UnusedSize() >= size) {
     if (compact_rate_.UpdateStatsAndCheck(true)) {
       Compact();
-      return;
+      return 0;
     }
   }
 
-  Expand(size, false);
+  return Resize((size + size_) * kExpandFactor);  // expand
 }
 
 void RingBuffer::Compact() {
+  if (data_ == read_ptr_) return;
   memcpy(data_, read_ptr_, readable_);
   read_ptr_ = data_;
   write_ptr_ = read_ptr_ + readable_;
   writeable_ = size_ - readable_;
-}
-
-void RingBuffer::Expand(size_t size, bool fixed) {
-  size_t new_size;
-  if (fixed) {
-    new_size = size;
-  } else {
-    new_size = size_ * kExpandFactor + size;
-  }
-
-  char* new_data = new char[new_size];
-  size_ = new_size;
-
-  memcpy(new_data, read_ptr_, readable_);
-  read_ptr_ = new_data;
-  write_ptr_ = read_ptr_ + readable_;
-  writeable_ = size_ - readable_;
-
-  if (data_) {
-    delete[] data_;
-    data_ = nullptr;
-  }
-  data_ = new_data;
-  new_data = nullptr;
-
-  compact_rate_.Reset();
-}
-
-void RingBuffer::Shrink(size_t size) {
-  readable_ = readable_ > size ? size : readable_;
-  char* new_data = new char[size];
-  size_ = size;
-
-  memcpy(new_data, read_ptr_, readable_);
-  read_ptr_ = new_data;
-  write_ptr_ = read_ptr_ + readable_;
-  writeable_ = size_ - readable_;
-
-  if (data_) {
-    delete[] data_;
-    data_ = nullptr;
-  }
-  data_ = new_data;
-  new_data = nullptr;
-
-  compact_rate_.Reset();
 }
