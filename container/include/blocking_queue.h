@@ -20,9 +20,11 @@ class BlockingQueue {
   BlockingQueue& operator=(BlockingQueue&&) = delete;
 
   bool Pop(T& outElem);
+  bool Push(const T& elem);
   bool Push(T&& elem);
+  bool Empty();
   void Blocking();
-  void Release(bool is_clear = true);
+  void Release(bool is_clear = false);
 
  private:
   size_t SwapQueue();
@@ -39,12 +41,35 @@ class BlockingQueue {
 
 template <typename T>
 bool BlockingQueue<T>::Pop(T& out_elem) {
-  std::lock_guard<std::mutex> popLock(pop_mtx_);
-  if (release_ || (pop_que_.empty() && SwapQueue() == 0)) {
+  std::lock_guard<std::mutex> pop_lock(pop_mtx_);
+  if (pop_que_.empty() && SwapQueue() == 0) {
     return false;
   }
-  out_elem = std::move(pop_que_.front());
+
+  auto& front = pop_que_.front();
+  if constexpr (std::is_move_assignable_v<T>) {
+    out_elem = std::move(front);
+  } else if constexpr (std::is_copy_assignable_v<T>) {
+    out_elem = front;
+  } else {
+    static_assert(std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>,
+                  "Type must be move- or copy-assignable to Pop()");
+  }
+
   pop_que_.pop();
+  return true;
+}
+
+template <typename T>
+bool BlockingQueue<T>::Push(const T& elem) {
+  {
+    std::lock_guard<std::mutex> push_lock(push_mtx_);
+    if (release_) {
+      return false;
+    }
+    push_que_.push(elem);
+  }
+  no_empty_.notify_one();
   return true;
 }
 
@@ -55,10 +80,17 @@ bool BlockingQueue<T>::Push(T&& elem) {
     if (release_) {
       return false;
     }
-    push_que_.push(std::forward<T>(elem));
+    push_que_.push(std::move(elem));
   }
   no_empty_.notify_one();
   return true;
+}
+
+template <typename T>
+bool BlockingQueue<T>::Empty() {
+  std::lock_guard<std::mutex> pop_lock(pop_mtx_);
+  std::lock_guard<std::mutex> push_lock(push_mtx_);
+  return pop_que_.empty() && push_que_.empty();
 }
 
 // 多线程只可能有一个线程进入，并且持有pop_mtx_(Pop操作)
@@ -67,9 +99,6 @@ size_t BlockingQueue<T>::SwapQueue() {
   std::unique_lock<std::mutex> push_lock(push_mtx_);
   no_empty_.wait(push_lock,
                  [this]() { return !push_que_.empty() || release_; });
-  if (release_) {
-    return 0;
-  }
   std::swap(pop_que_, push_que_);
   return pop_que_.size();
 }
@@ -81,8 +110,10 @@ void BlockingQueue<T>::Blocking() {
 
 template <typename T>
 void BlockingQueue<T>::Release(bool is_clear) {
-  release_ = true;
-  no_empty_.notify_all();
+  bool expected = false;
+  if (release_.compare_exchange_strong(expected, true)) {
+    no_empty_.notify_all();
+  }
   if (is_clear) Clear();
 }
 

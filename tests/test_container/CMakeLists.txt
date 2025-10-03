@@ -1,4 +1,7 @@
-add_executable(test_container test_ring_buffer.cpp)
+add_executable(test_container
+    test_ring_buffer.cpp
+    test_blocking_queue.cpp
+)
 
 target_link_libraries(test_container
     PRIVATE
