@@ -6,3 +6,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(test_container)
+add_subdirectory(test_http)

@@ -58,35 +58,6 @@ void ModLogTest() {
   std::cout << "main end: pid : " << getpid() << std::endl;
 }
 
-int HttpTest() {
-    const char* http_request =
-      "GET /hello/world?name=test HTTP/1.1\r\n"
-      "Host: example.com\r\n"
-      "User-Agent: curl/7.68.0\r\n"
-      "Accept: */*\r\n"
-      "\r\n";
-
-  HttpParserWrap hp_wrap;
-  int ret = hp_wrap.Parser(http_request);
-  if (ret < 0) {
-    std::cout << "http parser failed" << std::endl;
-    std::cout << hp_wrap.GetError() << std::endl;
-    return -1;
-  }
-  std::cout << "http parser success" << std::endl;
-  std::string str;
-  int t;
-  hp_wrap.Body(str);
-  std::cout << str << std::endl;
-  hp_wrap.Status(t);
-  std::cout << t << std::endl;
-  hp_wrap.Method(t);
-  std::cout << t << std::endl;
-  hp_wrap.Url(str);
-  std::cout << "Url : " << str << std::endl;
-  return 0;
-}
-
 void UrlTest() {
   std::string uir_str("https://example.com/search/info?q=me&lang=en#top");
   std::cout << "start" << std::endl;

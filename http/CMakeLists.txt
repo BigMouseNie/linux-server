@@ -30,3 +30,7 @@ target_include_directories(http PUBLIC
 target_link_libraries(http PRIVATE
     uriparser
 )
+
+target_link_libraries(http PUBLIC
+    container
+)
