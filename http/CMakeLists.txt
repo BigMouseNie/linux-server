@@ -13,12 +13,13 @@ FetchContent_Declare(
   GIT_TAG        uriparser-0.9.8
 )
 set(URIPARSER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(URIPARSER_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
+set(URIPARSER_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(uriparser)
 
 add_library(http STATIC
     ${http_parser_SOURCE_DIR}/http_parser.c
     src/http_parser_wrap.cpp
+    src/uri_parser.cpp
 )
 
 target_include_directories(http PUBLIC

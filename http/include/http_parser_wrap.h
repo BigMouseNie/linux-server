@@ -1,11 +1,11 @@
-#ifndef HTTP_HTTPPARSRWRAP_H_
-#define HTTP_HTTPPARSRWRAP_H_
+#ifndef HTTP_HTTPPARSERWRAP_H_
+#define HTTP_HTTPPARSERWRAP_H_
+
+#include <string.h>
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
-#include "Uri.h"
 #include "http_parser.h"
 #include "ring_buffer.h"
 
@@ -309,46 +309,4 @@ int HttpParserWrap<T>::OnMessageComplete() {
   return 0;
 }
 
-/**
- * https://example.com/search?q=chatgpt&lang=en#top
- * scheme: https
- * host: example.com
- * path: /search
- * query: q=chatgpt&lang=en
- * fragment: top
- */
-class UrlObject {
- public:
-  UrlObject(const std::string& uri) : error_str(nullptr) {
-    valid_ = (Parser(uri) >= 0);
-    GetQueryAndFillMap();
-  }
-  ~UrlObject() { uriFreeUriMembersA(&uri_); }
-
-  std::string Scheme() const;
-  std::string Host() const;
-  std::string Path() const;
-  std::string Query() const;
-  bool IsValid() { return valid_; }
-  std::string GetErrorStr() {
-    if (error_str) {
-      return std::string(error_str);
-    }
-    return "";
-  }
-  std::pair<bool, std::string> operator[](const std::string& key);
-
- private:
-  int Parser(const std::string& uri);
-  int DesParser(std::string& url);
-  void GetQueryAndFillMap();
-
- private:
-  UriUriA uri_;
-  bool valid_;
-  const char* error_str;
-  std::string query_str_;
-  std::unordered_map<std::string, std::string> query_map_;
-};
-
-#endif  // HTTP_HTTPPARSRWRAP_H_
+#endif  // HTTP_HTTPPARSERWRAP_H_

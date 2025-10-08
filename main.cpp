@@ -2,13 +2,13 @@
 
 #include "crypto_wrap.h"
 #include "field.h"
-#include "http_parser_wrap.h"
 #include "logger.h"
 #include "process_wrapper.h"
 #include "socket_creator.h"
 #include "sqlite3_db.h"
 #include "thread_pool.h"
 #include "thread_wrapper.h"
+#include "uri_parser.h"
 
 int CreateLoggerServer(ProcessWrapper* proc) {
   std::cout << "start create logger server" << std::endl;
@@ -56,24 +56,6 @@ void ModLogTest() {
   proc1.WriteFdToPipe(-1);
   sleep(1);
   std::cout << "main end: pid : " << getpid() << std::endl;
-}
-
-void UrlTest() {
-  std::string uir_str("https://example.com/search/info?q=me&lang=en#top");
-  std::cout << "start" << std::endl;
-  UrlObject url_obj(uir_str);
-  std::cout << "end" << std::endl;
-  if (url_obj.IsValid()) {
-    std::cout << "Scheme : " << url_obj.Scheme() << std::endl;
-    std::cout << "Host : " << url_obj.Host() << std::endl;
-    std::cout << "Path : " << url_obj.Path() << std::endl;
-    std::cout << "Query : " << url_obj.Query() << std::endl;
-    std::cout << "q : " << url_obj["q"].second << std::endl;
-    std::cout << "lang : " << url_obj["lang"].second << std::endl;
-    std::cout << "null : " << url_obj["null"].second << std::endl;
-  } else {
-    std::cout << url_obj.GetErrorStr() << std::endl;
-  }
 }
 
 int Sqlite3Test() {
@@ -174,5 +156,4 @@ int Sqlite3Test() {
 
 int main() {
   //  pass
-  return 0;
 }
