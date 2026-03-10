@@ -1,10 +1,11 @@
 #ifndef NETWORK_SOCKETWRAP_H_
 #define NETWORK_SOCKETWRAP_H_
 
+#include <sys/socket.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <sys/socket.h>
 
 class SocketWrap {
  public:
@@ -18,6 +19,8 @@ class SocketWrap {
 
   int GetFd() const { return fd_; }
   bool IsValid() const { return fd_ >= 0; }
+  void SetManualMgmt(bool manual) { manual_mgmt_ = manual; }
+  bool IsNonBlock(bool* valid = nullptr) const;
 
   virtual void Close();
 
@@ -32,16 +35,18 @@ class SocketWrap {
 
  private:
   int fd_ = -1;
+  bool manual_mgmt_ = false;
 };
 
 class ServerSocket : public SocketWrap {
  public:
-  ServerSocket(uint16_t port, bool ipv6 = false, bool non_block = true,
+  ServerSocket(uint16_t port, bool ipv6 = false, bool non_block = false,
                int backlog = 128);
-  explicit ServerSocket(const std::string& path, bool non_block = true);
+  explicit ServerSocket(const std::string& path, bool non_block = false);
   virtual ~ServerSocket() override;
 
-  int Accept(struct sockaddr* client_addr = nullptr, socklen_t* addr_len = nullptr);
+  int Accept(struct sockaddr* client_addr = nullptr,
+             socklen_t* addr_len = nullptr);
 
  private:
   std::string unix_path_;  // Unix socket
@@ -49,15 +54,16 @@ class ServerSocket : public SocketWrap {
 
 class ClientSocket : public SocketWrap {
  public:
-  ClientSocket(bool ipv6 = false, bool non_block = true);
+  ClientSocket(bool ipv6 = false, bool non_block = false);
   ClientSocket(const std::string& ip, uint16_t port, bool ipv6 = false,
-               bool non_block = true);
-  explicit ClientSocket(const std::string& path, bool non_block = true);
+               bool non_block = false);
+  explicit ClientSocket(const std::string& path, bool non_block = false);
 
   virtual ~ClientSocket() override;
 
   int Connect(const std::string& ip, uint16_t port);
   int Connect(const std::string& path);
+  bool IsConnected() const { return connected_; }
 
  private:
   bool connected_ = false;

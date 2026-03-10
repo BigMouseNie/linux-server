@@ -7,3 +7,4 @@ FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(test_container)
 add_subdirectory(test_http)
+add_subdirectory(test_network)

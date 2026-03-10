@@ -9,7 +9,6 @@
 #include <unistd.h>
 
 // SocketWrap implementation
-
 SocketWrap::SocketWrap(SocketWrap&& other) : fd_(other.fd_) { other.fd_ = -1; }
 
 SocketWrap& SocketWrap::operator=(SocketWrap&& other) {
@@ -20,7 +19,20 @@ SocketWrap& SocketWrap::operator=(SocketWrap&& other) {
   return *this;
 }
 
+bool SocketWrap::IsNonBlock(bool* valid) const {
+  if (!IsValid()) {
+    if (valid) *valid = false;
+    return false;
+  }
+  int flags = fcntl(fd_, F_GETFL, 0);
+  if (valid) *valid = true;
+  return (flags & O_NONBLOCK) != 0;
+}
+
 void SocketWrap::Close() {
+  if (manual_mgmt_) {
+    return;
+  }
   if (fd_ != -1) {
     close(fd_);
     fd_ = -1;
@@ -28,7 +40,6 @@ void SocketWrap::Close() {
 }
 
 // ServerSocket implementation
-
 ServerSocket::ServerSocket(uint16_t port, bool ipv6, bool non_block,
                            int backlog) {
   int domain = ipv6 ? AF_INET6 : AF_INET;
@@ -125,7 +136,6 @@ int ServerSocket::Accept(struct sockaddr* client_addr, socklen_t* addr_len) {
 }
 
 // ClientSocket implementation
-
 ClientSocket::ClientSocket(bool ipv6, bool non_block) {
   int domain = ipv6 ? AF_INET6 : AF_INET;
   int fd = socket(domain, SOCK_STREAM, 0);
