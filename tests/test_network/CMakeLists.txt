@@ -1,17 +1,12 @@
-add_executable(test_socket_wrap
+add_executable(test_network
   test_socket_wrap.cpp
 )
 
-target_include_directories(test_socket_wrap
-  PRIVATE
-  ${CMAKE_SOURCE_DIR}/network/include
+target_link_libraries(test_network
+    PRIVATE
+    network
+    GTest::gtest_main
 )
 
-target_link_libraries(test_socket_wrap
-  PRIVATE
-  GTest::gtest
-  GTest::gtest_main
-  pthread
-)
-
-add_test(NAME test_socket_wrap COMMAND test_socket_wrap)
+include(GoogleTest)
+gtest_discover_tests(test_network)

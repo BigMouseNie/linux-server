@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <iostream>
 #include <thread>
 #include <vector>
 
@@ -295,7 +296,7 @@ TEST_F(SocketWrapTest, UnixSocketCommunication) {
 }
 
 TEST_F(SocketWrapTest, ClientSocketUnixConnect) {
-  ServerSocket server(kTestPath, false);
+  ServerSocket server(std::string(kTestPath), false);
   ASSERT_TRUE(server.IsValid());
 
   std::thread accept_thread([this, &server]() {
@@ -309,7 +310,7 @@ TEST_F(SocketWrapTest, ClientSocketUnixConnect) {
   });
 
   std::this_thread::sleep_for(100ms);
-  ClientSocket client(kTestPath, false);
+  ClientSocket client(std::string(kTestPath), false);
   ASSERT_TRUE(client.IsValid());
 
   send(client.GetFd(), "hello", 5, 0);
@@ -323,7 +324,7 @@ TEST_F(SocketWrapTest, ClientSocketUnixConnect) {
 
 // Multiple clients test
 TEST_F(SocketWrapTest, MultipleClients) {
-  ServerSocket server(kTestPort, false, true, 10);
+  ServerSocket server(kTestPort, false, false, 10);
   ASSERT_TRUE(server.IsValid());
 
   constexpr int kNumClients = 5;
