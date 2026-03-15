@@ -1,10 +1,8 @@
 add_library(network STATIC
     src/socket_wrap.cpp
     src/socket_buffer.cpp
-    # src/socket_creator.cpp
-    # src/epoller.cpp
-    # src/socket_wrapper.cpp
-    # src/acceptor.cpp
+    src/acceptor.cpp
+    src/epoller.cpp
     # src/reactor_acc.cpp
 )
 

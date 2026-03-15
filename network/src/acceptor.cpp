@@ -3,12 +3,6 @@
 #include <errno.h>
 #include <sys/socket.h>
 
-int Acceptor::Create(AcceptCallBack cb, bool is_et) {
-  is_et_ = is_et;
-  accept_cb_ = std::move(cb);
-  return 0;
-}
-
 int Acceptor::DealConnFromSock(int sock) {
   struct sockaddr_storage addr;
   socklen_t addr_len;

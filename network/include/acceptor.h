@@ -7,12 +7,17 @@ class Acceptor {
  public:
   using AcceptCallBack =
       std::function<void(int conn_fd, struct sockaddr* addr, int addr_len)>;
-  Acceptor() : is_et_(true) {}
+
+  Acceptor(AcceptCallBack cb, bool is_et = true)
+      : accept_cb_(std::move(cb)), is_et_(is_et) {}
   ~Acceptor() = default;
-  virtual int Create(AcceptCallBack cb, bool is_et);
+
+  Acceptor(const Acceptor&) = delete;
+  Acceptor& operator=(const Acceptor&) = delete;
+
   int DealConnFromSock(int sock);
 
- protected:
+ private:
   AcceptCallBack accept_cb_;
   bool is_et_;
 };
