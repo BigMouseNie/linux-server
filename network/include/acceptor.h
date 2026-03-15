@@ -5,8 +5,8 @@
 
 class Acceptor {
  public:
-  using AcceptCallBack = std::function<void(int conn_fd, struct sockaddr* addr,
-                                            int addr_len)>;
+  using AcceptCallBack =
+      std::function<void(int conn_fd, struct sockaddr* addr, int addr_len)>;
   Acceptor() : is_et_(true) {}
   ~Acceptor() = default;
   virtual int Create(AcceptCallBack cb, bool is_et);

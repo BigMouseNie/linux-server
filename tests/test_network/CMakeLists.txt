@@ -1,5 +1,6 @@
 add_executable(test_network
   test_socket_wrap.cpp
+  test_socket_buffer.cpp
 )
 
 target_link_libraries(test_network

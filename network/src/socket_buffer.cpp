@@ -3,11 +3,12 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "socket_wrapper.h"
+#include "socket_wrap.h"
 
 const size_t SocketBuffer::kMinBufSize = 256;
 
 int SocketBuffer::ReadFromSock(int sock, bool is_et, int* saved_errno) {
+  if (sock < 0) return -1;
   int res = 0;
   bool err_interr = false;  // 是否信号中断
   do {
@@ -26,7 +27,7 @@ int SocketBuffer::ReadFromSock(int sock, bool is_et, int* saved_errno) {
         break;
       else {
         *saved_errno = errno;
-        res = -1;
+        res = -2;
         break;
       }
     }
@@ -35,6 +36,7 @@ int SocketBuffer::ReadFromSock(int sock, bool is_et, int* saved_errno) {
 }
 
 int SocketBuffer::WriteToSock(int sock, bool is_et, int* saved_errno) {
+  if (sock < 0) return -1;
   int res = 0;
   bool err_interr = false;
   do {
@@ -51,7 +53,7 @@ int SocketBuffer::WriteToSock(int sock, bool is_et, int* saved_errno) {
         break;
       else {
         *saved_errno = errno;
-        res = -1;
+        res = -2;
         break;
       }
     }
@@ -59,12 +61,12 @@ int SocketBuffer::WriteToSock(int sock, bool is_et, int* saved_errno) {
   return res;
 }
 
-int SocketBuffer::ReadFromSock(SocketWrapper& sock, int* saved_errno) {
+int SocketBuffer::ReadFromSock(SocketWrap& sock, int* saved_errno) {
   if (!sock.IsValid()) return -1;
-  return ReadFromSock(sock.GetSocket(), sock.IsNonBlock(), saved_errno);
+  return ReadFromSock(sock.GetFd(), sock.IsNonBlock(), saved_errno);
 }
 
-int SocketBuffer::WriteToSock(SocketWrapper& sock, int* saved_errno) {
+int SocketBuffer::WriteToSock(SocketWrap& sock, int* saved_errno) {
   if (!sock.IsValid()) return -1;
-  return WriteToSock(sock.GetSocket(), sock.IsNonBlock(), saved_errno);
+  return WriteToSock(sock.GetFd(), sock.IsNonBlock(), saved_errno);
 }
