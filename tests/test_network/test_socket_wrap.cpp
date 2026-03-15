@@ -89,31 +89,11 @@ TEST_F(SocketWrapTest, Release) {
   close(released_fd);
 }
 
-TEST_F(SocketWrapTest, ManualMgmtNoClose) {
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
-  ASSERT_GE(fd, 0);
-
-  SocketWrap sock(fd);
-  sock.SetManualMgmt(true);  // 手动管理，不自动关闭
-
-  // 析构时不会自动关闭
-  sock.~SocketWrap();
-
-  // 检查 fd 是否有效
-  int result = fcntl(fd, F_GETFL, 0);
-  EXPECT_GE(result, 0) << "fd should still be valid";
-
-  close(fd);
-}
-
 TEST_F(SocketWrapTest, AutoCloseOnDestroy) {
   int fd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(fd, 0);
 
-  {
-    SocketWrap sock(fd);
-    sock.SetManualMgmt(false);  // 自动管理
-  }                             // sock 离开作用域，应该自动关闭
+  { SocketWrap sock(fd); }  // sock 离开作用域，应该自动关闭
 
   // 检查 fd 是否已关闭
   int result = fcntl(fd, F_GETFL, 0);

@@ -19,7 +19,6 @@ class SocketWrap {
 
   int GetFd() const { return fd_; }
   bool IsValid() const { return fd_ >= 0; }
-  void SetManualMgmt(bool manual) { manual_mgmt_ = manual; }
   bool IsNonBlock(bool* valid = nullptr) const;
 
   virtual void Close();
@@ -35,7 +34,6 @@ class SocketWrap {
 
  private:
   int fd_ = -1;
-  bool manual_mgmt_ = false;
 };
 
 class ServerSocket : public SocketWrap {

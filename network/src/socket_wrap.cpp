@@ -30,10 +30,7 @@ bool SocketWrap::IsNonBlock(bool* valid) const {
 }
 
 void SocketWrap::Close() {
-  if (manual_mgmt_) {
-    return;
-  }
-  if (fd_ != -1) {
+  if (fd_ >= 0) {
     close(fd_);
     fd_ = -1;
   }
