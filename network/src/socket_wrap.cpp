@@ -111,6 +111,17 @@ ServerSocket::~ServerSocket() {
   }
 }
 
+ServerSocket::ServerSocket(ServerSocket&& other)
+    : SocketWrap(std::move(other)), unix_path_(std::move(other.unix_path_)) {}
+
+ServerSocket& ServerSocket::operator=(ServerSocket&& other) {
+  if (this == &other) return *this;
+  Close();
+  SocketWrap::operator=(std::move(other));
+  unix_path_ = std::move(other.unix_path_);
+  return *this;
+}
+
 int ServerSocket::Accept(struct sockaddr* client_addr, socklen_t* addr_len) {
   if (!IsValid()) {
     return -1;
@@ -206,6 +217,20 @@ ClientSocket::ClientSocket(const std::string& path, bool non_block) {
 }
 
 ClientSocket::~ClientSocket() { connected_ = false; }
+
+ClientSocket::ClientSocket(ClientSocket&& other)
+    : SocketWrap(std::move(other)), connected_(other.connected_) {
+  other.connected_ = false;
+}
+
+ClientSocket& ClientSocket::operator=(ClientSocket&& other) {
+  if (this == &other) return *this;
+  Close();
+  SocketWrap::operator=(std::move(other));
+  connected_ = other.connected_;
+  other.connected_ = false;
+  return *this;
+}
 
 int ClientSocket::Connect(const std::string& ip, uint16_t port) {
   if (!IsValid()) {

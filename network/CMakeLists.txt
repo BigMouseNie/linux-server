@@ -3,7 +3,7 @@ add_library(network STATIC
     src/socket_buffer.cpp
     src/acceptor.cpp
     src/epoller.cpp
-    # src/reactor_acc.cpp
+    src/reactor_acc.cpp
 )
 
 target_include_directories(network PUBLIC

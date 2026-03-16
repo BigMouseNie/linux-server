@@ -3,6 +3,7 @@ add_executable(test_network
   test_socket_buffer.cpp
   test_acceptor.cpp
   test_epoller.cpp
+  test_reactor_acc.cpp
 )
 
 target_link_libraries(test_network

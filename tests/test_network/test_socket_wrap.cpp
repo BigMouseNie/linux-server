@@ -342,3 +342,154 @@ TEST_F(SocketWrapTest, MultipleClients) {
 
   EXPECT_EQ(connected_count, kNumClients);
 }
+
+// ServerSocket Move tests
+TEST_F(SocketWrapTest, ServerSocketMoveConstructor) {
+  ServerSocket server1(kTestPort, false, false, 10);
+  ASSERT_TRUE(server1.IsValid());
+  int fd = server1.GetFd();
+
+  ServerSocket server2(std::move(server1));
+
+  // server2 应该拥有原来的 fd
+  EXPECT_EQ(server2.GetFd(), fd);
+  EXPECT_TRUE(server2.IsValid());
+
+  // server1 应该不再有效
+  EXPECT_EQ(server1.GetFd(), -1);
+  EXPECT_FALSE(server1.IsValid());
+}
+
+TEST_F(SocketWrapTest, ServerSocketMoveAssignment) {
+  ServerSocket server1(kTestPort, false, false, 10);
+  ServerSocket server2(kTestPort + 100, false, false, 10);
+  ASSERT_TRUE(server1.IsValid());
+  ASSERT_TRUE(server2.IsValid());
+
+  int fd1 = server1.GetFd();
+  int fd2 = server2.GetFd();
+
+  server2 = std::move(server1);
+
+  // server2 应该拥有 server1 的 fd
+  EXPECT_EQ(server2.GetFd(), fd1);
+  EXPECT_TRUE(server2.IsValid());
+
+  // server1 应该不再有效
+  EXPECT_EQ(server1.GetFd(), -1);
+  EXPECT_FALSE(server1.IsValid());
+
+  // 原来的 fd2 应该被关闭
+  int result = fcntl(fd2, F_GETFL, 0);
+  EXPECT_LT(result, 0);  // fd2 应该已关闭
+}
+
+TEST_F(SocketWrapTest, ServerSocketMoveUnixPath) {
+  const char* unix_path = "/tmp/test_server_move.sock";
+  unlink(unix_path);
+
+  ServerSocket server1(std::string(unix_path), false);
+  ASSERT_TRUE(server1.IsValid());
+
+  ServerSocket server2(std::move(server1));
+
+  // server2 应该接管 unix_path，析构时会 unlink
+  EXPECT_TRUE(server2.IsValid());
+
+  // 文件应该还存在
+  struct stat st;
+  EXPECT_EQ(stat(unix_path, &st), 0);
+}
+
+TEST_F(SocketWrapTest, ServerSocketSelfMove) {
+  ServerSocket server(kTestPort + 101, false, false, 10);
+  ASSERT_TRUE(server.IsValid());
+  int fd = server.GetFd();
+
+  // 自赋值应该安全
+  server = std::move(server);
+
+  // 行为未定义，但至少不应该崩溃
+  // fd 可能仍然有效
+}
+
+// ClientSocket Move tests
+TEST_F(SocketWrapTest, ClientSocketMoveConstructor) {
+  ClientSocket client1(false, false);
+  ASSERT_TRUE(client1.IsValid());
+  int fd = client1.GetFd();
+
+  ClientSocket client2(std::move(client1));
+
+  // client2 应该拥有原来的 fd
+  EXPECT_EQ(client2.GetFd(), fd);
+  EXPECT_TRUE(client2.IsValid());
+
+  // client1 应该不再有效
+  EXPECT_EQ(client1.GetFd(), -1);
+  EXPECT_FALSE(client1.IsValid());
+}
+
+TEST_F(SocketWrapTest, ClientSocketMoveAssignment) {
+  ClientSocket client1(false, false);
+  ClientSocket client2(false, false);
+  ASSERT_TRUE(client1.IsValid());
+  ASSERT_TRUE(client2.IsValid());
+
+  int fd1 = client1.GetFd();
+  int fd2 = client2.GetFd();
+
+  client2 = std::move(client1);
+
+  // client2 应该拥有 client1 的 fd
+  EXPECT_EQ(client2.GetFd(), fd1);
+  EXPECT_TRUE(client2.IsValid());
+
+  // client1 应该不再有效
+  EXPECT_EQ(client1.GetFd(), -1);
+  EXPECT_FALSE(client1.IsValid());
+
+  // 原来的 fd2 应该被关闭
+  int result = fcntl(fd2, F_GETFL, 0);
+  EXPECT_LT(result, 0);  // fd2 应该已关闭
+}
+
+TEST_F(SocketWrapTest, ClientSocketMoveConnectedState) {
+  ServerSocket server(kTestPort + 102, false, false, 10);
+  ASSERT_TRUE(server.IsValid());
+
+  std::thread accept_thread([&]() {
+    std::this_thread::sleep_for(100ms);
+    int fd = server.Accept();
+    if (fd >= 0) close(fd);
+  });
+
+  std::this_thread::sleep_for(50ms);
+  ClientSocket client1("127.0.0.1", kTestPort + 102, false, false);
+  ASSERT_TRUE(client1.IsValid());
+  EXPECT_TRUE(client1.IsConnected());
+
+  int fd = client1.GetFd();
+  ClientSocket client2(std::move(client1));
+
+  // client2 应该继承 connected 状态
+  EXPECT_EQ(client2.GetFd(), fd);
+  EXPECT_TRUE(client2.IsConnected());
+
+  // client1 应该不再连接
+  EXPECT_FALSE(client1.IsValid());
+  EXPECT_FALSE(client1.IsConnected());
+
+  accept_thread.join();
+}
+
+TEST_F(SocketWrapTest, ClientSocketSelfMove) {
+  ClientSocket client(false, false);
+  ASSERT_TRUE(client.IsValid());
+  int fd = client.GetFd();
+
+  // 自赋值应该安全
+  client = std::move(client);
+
+  // 行为未定义，但至少不应该崩溃
+}

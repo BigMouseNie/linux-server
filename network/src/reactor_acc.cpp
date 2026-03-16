@@ -3,42 +3,37 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
-int ReactorAcc::Create(AcceptCallBack cb, int listenfd_num, bool is_et) {
+ReactorAcc::ReactorAcc(AcceptCallBack cb, int listenfd_num, bool is_et)
+    : Acceptor(std::move(cb), is_et) {
   Epoller::EventsCallBack ev_cb = [this](struct epoll_event* evs, size_t size) {
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
       int listenfd = evs[i].data.fd;
-      if (evs[0].events & EPOLLERR) Remove(listenfd);
+      if (evs[i].events & EPOLLERR) Remove(listenfd);
       int ret = DealConnFromSock(listenfd);
       if (ret < 0) Remove(listenfd);
     }
   };
+  epoller_ptr_ =
+      std::make_unique<Epoller>(std::move(ev_cb), listenfd_num * 2, is_et);
+}
 
-  if (epoller_.Create(ev_cb, listenfd_num * 2, is_et) < 0) {
+int ReactorAcc::SetListenSock(ServerSocket&& sock) {
+  if (sock.IsValid() == false || epoller_ptr_ == nullptr ||
+      epoller_ptr_->IsValid() == false ||
+      epoller_ptr_->Add(sock.GetFd(), EPOLLIN) < 0)
     return -1;
-  }
-  is_et_ = is_et;
-  accept_cb_ = std::move(cb);
+
+  listenfd_map_.emplace(sock.GetFd(), std::move(sock));
   return 0;
 }
 
-int ReactorAcc::SetListenSock(SocketWrapper&& sock) {
-  if (epoller_.Add(sock.GetSocket(), EPOLLIN) < 0) {
-    return -1;
-  }
-  sock.SetManualMgnt(false);
-  listenfd_map_[sock.GetSocket()] = std::move(sock);
-  return 0;
-}
-
-int ReactorAcc::Accept(int timeout_ms) {
-  int ret = epoller_.Wait(timeout_ms);
-  if (ret < 0) return -1;
-  return 0;
+int ReactorAcc::Accept(int timeout_ms, int* saved_errno) {
+  return epoller_ptr_->Wait(timeout_ms, saved_errno);
 }
 
 void ReactorAcc::Remove(int listenfd) {
   auto it = listenfd_map_.find(listenfd);
   if (it == listenfd_map_.end()) return;
-  epoller_.Del(listenfd);
+  epoller_ptr_->Del(listenfd);
   listenfd_map_.erase(it);
 }

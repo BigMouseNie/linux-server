@@ -43,6 +43,9 @@ class ServerSocket : public SocketWrap {
   explicit ServerSocket(const std::string& path, bool non_block = false);
   virtual ~ServerSocket() override;
 
+  ServerSocket(ServerSocket&& other);
+  ServerSocket& operator=(ServerSocket&& other);
+
   int Accept(struct sockaddr* client_addr = nullptr,
              socklen_t* addr_len = nullptr);
 
@@ -58,6 +61,9 @@ class ClientSocket : public SocketWrap {
   explicit ClientSocket(const std::string& path, bool non_block = false);
 
   virtual ~ClientSocket() override;
+
+  ClientSocket(ClientSocket&& other);
+  ClientSocket& operator=(ClientSocket&& other);
 
   int Connect(const std::string& ip, uint16_t port);
   int Connect(const std::string& path);
