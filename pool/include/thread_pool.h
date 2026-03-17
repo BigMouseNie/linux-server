@@ -12,19 +12,17 @@ class ThreadPool {
   using TaskQue = BlockingQueue<Task>;
 
  public:
-  ThreadPool() = default;
+  explicit ThreadPool(int thrd_num = 1);
   ~ThreadPool();
 
   ThreadPool(const ThreadPool&) = delete;
   ThreadPool& operator=(const ThreadPool&) = delete;
 
-  int Start(int thrd_num);
-
   template <typename Func, typename... Args>
-  void AddTask(Func&& func, Args&&... args) {
+  bool AddTask(Func&& func, Args&&... args) {
     auto task =
         std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
-    que_.Push(std::move(task));
+    return que_.Push(std::move(task));
   }
 
  private:

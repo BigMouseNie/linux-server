@@ -221,3 +221,110 @@ TEST(BlockingQueueTest, NontrivialType02) {
   EXPECT_EQ(consumer_sum.load(), result);
   EXPECT_TRUE(que.Empty() == true);
 }
+
+// Size() tests
+
+TEST(BlockingQueueTest, SizeEmpty) {
+  BlockingQueue<int> que;
+  EXPECT_EQ(que.Size(), 0);
+  EXPECT_TRUE(que.Empty());
+}
+
+TEST(BlockingQueueTest, SizeAfterPush) {
+  BlockingQueue<int> que;
+  que.Push(1);
+  EXPECT_EQ(que.Size(), 1);
+
+  que.Push(2);
+  que.Push(3);
+  EXPECT_EQ(que.Size(), 3);
+}
+
+TEST(BlockingQueueTest, SizeAfterPop) {
+  BlockingQueue<int> que;
+  que.Push(1);
+  que.Push(2);
+  que.Push(3);
+  EXPECT_EQ(que.Size(), 3);
+
+  int val;
+  que.Pop(val);
+  EXPECT_EQ(que.Size(), 2);
+
+  que.Pop(val);
+  que.Pop(val);
+  EXPECT_EQ(que.Size(), 0);
+}
+
+TEST(BlockingQueueTest, SizeMultiThreaded) {
+  BlockingQueue<int> que;
+  const int push_count = 1000;
+  std::atomic<int> push_done{0};
+
+  // Producer thread
+  std::thread producer([&]() {
+    for (int i = 0; i < push_count; ++i) {
+      que.Push(i);
+    }
+    push_done = 1;
+  });
+
+  // Wait for producer to finish
+  producer.join();
+
+  // Size should be push_count
+  EXPECT_EQ(que.Size(), push_count);
+
+  que.Release();
+}
+
+TEST(BlockingQueueTest, SizeWithConcurrentAccess) {
+  BlockingQueue<int> que;
+  const int push_count = 10000;
+  std::atomic<bool> done{false};
+
+  // Producer thread
+  std::thread producer([&]() {
+    for (int i = 0; i < push_count; ++i) {
+      que.Push(i);
+    }
+    done = true;
+  });
+
+  // Consumer thread - also checks size
+  std::thread consumer([&]() {
+    int val;
+    while (!done || que.Size() > 0) {
+      que.Pop(val);
+    }
+  });
+
+  producer.join();
+  que.Release();
+  consumer.join();
+
+  EXPECT_EQ(que.Size(), 0);
+}
+
+TEST(BlockingQueueTest, SizeAfterRelease) {
+  BlockingQueue<int> que;
+  que.Push(1);
+  que.Push(2);
+  que.Push(3);
+  EXPECT_EQ(que.Size(), 3);
+
+  que.Release(true);  // Release with clear
+  EXPECT_EQ(que.Size(), 0);
+  EXPECT_TRUE(que.Empty());
+}
+
+TEST(BlockingQueueTest, SizeWithMovePush) {
+  BlockingQueue<std::string> que;
+  std::string str1 = "hello";
+  std::string str2 = "world";
+
+  que.Push(std::move(str1));
+  que.Push(std::move(str2));
+
+  EXPECT_EQ(que.Size(), 2);
+}

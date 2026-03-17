@@ -23,6 +23,7 @@ class BlockingQueue {
   bool Push(const T& elem);
   bool Push(T&& elem);
   bool Empty();
+  size_t Size();
   void Blocking();
   void Release(bool is_clear = false);
 
@@ -91,6 +92,13 @@ bool BlockingQueue<T>::Empty() {
   std::lock_guard<std::mutex> pop_lock(pop_mtx_);
   std::lock_guard<std::mutex> push_lock(push_mtx_);
   return pop_que_.empty() && push_que_.empty();
+}
+
+template <typename T>
+size_t BlockingQueue<T>::Size() {
+  std::lock_guard<std::mutex> pop_lock(pop_mtx_);
+  std::lock_guard<std::mutex> push_lock(push_mtx_);
+  return pop_que_.size() + push_que_.size();
 }
 
 // 多线程只可能有一个线程进入，并且持有pop_mtx_(Pop操作)

@@ -1,17 +1,17 @@
 #include "thread_pool.h"
 
-ThreadPool::ThreadPool::~ThreadPool() {
+ThreadPool::ThreadPool(int thrd_num) {
+  if (thrd_num <= 0) thrd_num = 1;
+  for (int i = 0; i < thrd_num; ++i) {
+    workers_.emplace_back(&ThreadPool::Work, this);
+  }
+}
+
+ThreadPool::~ThreadPool() {
   que_.Release();
   for (auto& thrd : workers_) {
     if (thrd.joinable()) thrd.join();
   }
-}
-
-int ThreadPool::Start(int thrd_num) {
-  for (int i = 0; i < thrd_num; ++i) {
-    workers_.emplace_back(&ThreadPool::Work, this);
-  }
-  return 0;
 }
 
 void ThreadPool::Work() {

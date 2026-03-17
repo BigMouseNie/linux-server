@@ -6,6 +6,6 @@ target_include_directories(pool PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(pool PRIVATE
+target_link_libraries(pool PUBLIC
     container
 )
