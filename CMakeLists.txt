@@ -14,7 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # FetchContent_MakeAvailable(nlohmann_json)
 
 add_subdirectory(container)
-# add_subdirectory(run)
+add_subdirectory(run)
 add_subdirectory(network)
 # add_subdirectory(logger)
 add_subdirectory(pool)

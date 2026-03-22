@@ -1,6 +1,6 @@
 add_library(run STATIC
-    src/process_wrapper.cpp
-    src/thread_wrapper.cpp
+    src/process_wrap.cpp
+    src/daemonize.cpp
 )
 
 target_include_directories(run PUBLIC
