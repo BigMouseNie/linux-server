@@ -1,53 +1,48 @@
 #ifndef LOGGER_LOGGER_H_
 #define LOGGER_LOGGER_H_
 
-#include <stdio.h>
-#include <unistd.h>
+#include <atomic>
+#include <cstdio>
+#include <string>
+#include <thread>
 
-#include <mutex>
-#include <unordered_set>
-
-#include "acceptor.h"
-#include "epoller.h"
-#include "socket_buffer.h"
-#include "socket_wrapper.h"
-#include "thread_wrapper.h"
+#include "blocking_queue.h"
 
 enum class LogLevel { kDebug, kInfo, kWarn, kError, kFatal };
 
 class Logger {
  public:
   static Logger& Instance();
-  int Create();
+
+  int Init(const char* log_dir, LogLevel min_level = LogLevel::kDebug,
+           size_t max_entries = 10240);
+  void Shutdown();
+
   void Log(LogLevel level, const char* file, int line, const char* fmt, ...);
 
  private:
-  Logger() : p_log_file_(nullptr), is_et_(true), runing_(false) {};
+  Logger() = default;
   ~Logger();
 
- private:
-  int CreateLogFile();
+  Logger(const Logger&) = delete;
+  Logger& operator=(const Logger&) = delete;
+
+  void WriteLoop();
+  void RotateIfNeeded();
   int CreateDirs(const char* path, mode_t mode = 0755);
   void GenerateLogFileName(char* dest);
-  void Remove(int clientfd);
-  void ReadSockToLogFile(int sock);
-  int Worker();
-  int Config();
+  int CreateLogFile();
 
  private:
-  SocketCfg serv_sock_info_;
-  SocketCfg clnt_sock_info_;
-  SocketWrapper serv_sock_;
-  Epoller epoller_;
-  Acceptor acceptor_;
-  ThreadWrapper worker_;
-  std::unordered_set<int> clientfd_set_;
-  std::mutex cfg_mtx_;
-  SocketBuffer log_buf_;
-  FILE* p_log_file_;
-  char log_dir_[256];
-  bool is_et_;
-  bool runing_;
+  BlockingQueue<std::string> que_;
+  std::thread writer_;
+  FILE* p_log_file_ = nullptr;
+  std::string log_dir_;
+  LogLevel min_level_ = LogLevel::kDebug;
+  size_t max_entries_ = 10240;  // 0 = 不限制
+  size_t cur_entries_ = 0;
+  size_t file_seq_ = 0;
+  std::atomic<bool> running_{false};
 };
 
 #define LOG_DEBUG(fmt, ...)                                         \
