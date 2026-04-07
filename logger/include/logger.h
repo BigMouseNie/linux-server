@@ -6,7 +6,11 @@
 #include <string>
 #include <thread>
 
+#ifdef LOGGER_USE_MPSC_QUEUE
+#include "mpsc_queue.h"
+#else
 #include "blocking_queue.h"
+#endif
 
 enum class LogLevel { kDebug, kInfo, kWarn, kError, kFatal };
 
@@ -34,7 +38,11 @@ class Logger {
   int CreateLogFile();
 
  private:
+#ifdef LOGGER_USE_MPSC_QUEUE
+  MPSCQueue<std::string> que_;
+#else
   BlockingQueue<std::string> que_;
+#endif
   std::thread writer_;
   FILE* p_log_file_ = nullptr;
   std::string log_dir_;

@@ -32,7 +32,9 @@ int Logger::Init(const char* log_dir, LogLevel min_level, size_t max_entries) {
 void Logger::Shutdown() {
   if (!running_.load()) return;
   running_.store(false);
+#ifndef LOGGER_USE_MPSC_QUEUE
   que_.Release();
+#endif
   if (writer_.joinable()) {
     writer_.join();
   }
